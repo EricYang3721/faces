@@ -3,6 +3,7 @@ object detection, resnet, single shot multi-box detection
 https://arxiv.org/pdf/1702.01243.pdf
 modified from work by yinguobing
 '''
+import time
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -62,15 +63,21 @@ class FaceDetector:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
 
 def main():
-    filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
-    img = cv2.imread(filepath)
-    #img = cv2.resize(img, (300,300))
+    start_time = time.time()
     detector = FaceDetector()
+    process_start = time.time()
+    print('time to initiate FaceDetector: ', process_start-start_time)
+    filepath = '/home/eric/Documents/face_analysis/data/photos/xin.jpg'
+    img = cv2.imread(filepath)
+    #img = cv2.resize(img, (300,300))    
     conf, box = detector.get_faceboxes(image=img, threshold=0.9)
     detector.draw_all_results(img)
+    print('time to finish processing', time.time()-process_start)
     cv2.imshow('image',img)
+    print(time.time()-process_start)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    
         
 if __name__ == '__main__':
     main()

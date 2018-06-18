@@ -2,7 +2,7 @@
 modified from work by yinguobing'''
 import numpy as np
 import cv2
-
+import time
 class PoseEstimator:
     '''Estimate head pose by the facial landmarks'''
     
@@ -146,17 +146,21 @@ class PoseEstimator:
             point_2d[8]), color, line_width, cv2.LINE_AA)
 
 def main():
+    
     from MarkDetector import MarkDetector
-    filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
+    markDetector = MarkDetector()
+    pose = PoseEstimator()
+    start_time = time.time()
+    filepath = '/home/eric/Documents/face_analysis/data/photos/xin.jpg'
     img = cv2.imread(filepath)
     
-    markDetector = MarkDetector()
+    
     boxes = markDetector.extract_cnn_facebox(image=img)
     face_imgs = markDetector.get_face_for_marks(img, boxes)
     marks = markDetector.detect_marks(face_imgs)
     marks = markDetector.fit_markers_in_image(marks, boxes)    
     
-    pose = PoseEstimator()
+    
     
     ### 2 different function: choose first or last 2    
     #r_vect, t_vect = pose.solve_pose_by_68_points(marks)
@@ -168,7 +172,8 @@ def main():
     #detector.draw_all_results(img)
     
     cv2.imshow('image',img)
-    cv2.waitKey(0)
+    print(time.time()-start_time)
+    cv2.waitKey(0)    
     cv2.destroyAllWindows()
         
 if __name__ == '__main__':

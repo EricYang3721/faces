@@ -151,12 +151,12 @@ def main():
     markDetector = MarkDetector()
     pose = PoseEstimator()
     start_time = time.time()
-    filepath = '/home/eric/Documents/face_analysis/data/photos/xin.jpg'
+    filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
     img = cv2.imread(filepath)
     
     
     boxes = markDetector.extract_cnn_facebox(image=img)
-    face_imgs = markDetector.get_face_for_marks(img, boxes)
+    face_imgs = markDetector.get_face_for_boxes(img, boxes)
     marks = markDetector.detect_marks(face_imgs)
     marks = markDetector.fit_markers_in_image(marks, boxes)    
     
@@ -164,15 +164,20 @@ def main():
     
     ### 2 different function: choose first or last 2    
     #r_vect, t_vect = pose.solve_pose_by_68_points(marks)
-    marks = pose.get_pose_marks(marks)
-    r_vect, t_vect = pose.solve_pose(marks)
-    
+    marks = pose.get_pose_marks(marks)    
+    pp = pose.solve_pose(marks)
+    r_vect, t_vect = pp
+    pose_np = np.array(pp).flatten()
+    print(pp)
+    print(pose_np)
+    stabile_pose = np.reshape(pose_np, (-1, 3))
+    print(stabile_pose)
     pose.draw_boxes(img, r_vect, t_vect)
     #MarkDetector.draw_marks(image=img, marks=marks)
     #detector.draw_all_results(img)
     
     cv2.imshow('image',img)
-    print(time.time()-start_time)
+    #print(time.time()-start_time)
     cv2.waitKey(0)    
     cv2.destroyAllWindows()
         

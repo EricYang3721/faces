@@ -126,9 +126,7 @@ class MarkDetector:
         rows = image.shape[0]
         cols = image.shape[1]
         for marks in marksFace:
-            for mark in marks:
-                if(mark[0]<0 or mark[0]>=cols or mark[1]<0 or mark[1]>=rows):
-                    continue
+            for mark in marks:                
                 cv2.circle(image, (int(mark[0]), int(mark[1])), 
                        1, color, -1, cv2.LINE_AA)
     
@@ -181,6 +179,8 @@ class MarkDetector:
         cropped = np.lib.pad(cropped, pad_w, 'edge')       
         return cropped
         
+    
+        
         
         
 # Question remains --> need to modify extract_cnn_faces if for multiple faces   
@@ -201,6 +201,7 @@ def main():
     MarkDetector.draw_marks(image=img, marksFace=marks)
     print('time to finish processing', time.time()-process_start)
     #detector.draw_all_results(img)
+    cv2.imwrite('fixed_algorithm.jpg', img)
     cv2.imshow('image',img)
     print(time.time()-process_start)
     cv2.waitKey(0)

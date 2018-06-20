@@ -67,7 +67,7 @@ def main():
     detector = FaceDetector()
     process_start = time.time()
     print('time to initiate FaceDetector: ', process_start-start_time)
-    filepath = '/home/eric/Documents/face_analysis/data/photos/xin.jpg'
+    filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
     img = cv2.imread(filepath)
     #img = cv2.resize(img, (300,300))    
     conf, box = detector.get_faceboxes(image=img, threshold=0.9)

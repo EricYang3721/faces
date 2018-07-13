@@ -44,13 +44,15 @@ def main():
     # 6 initializers for 6 landmarks per a face, since 6 are used to estimate pose
     # if use 68 landmarks to estimate pose, use 68 stabilizers
     if draw_head_pose == 1:
-        pose_stabilizers = [MarkStabilizer(input_dim=2,
-                                       cov_process=0.1,
-                                       cov_measure=1.5) for _ in range(6)]
-    if draw_landmarks == 1:
-        mark_stabilizers68 = [MarkStabilizer(input_dim=2,
+        pose_stabilizers = [MarkStabilizer(initial_state=[0,0,0,0],
+                                           input_dim=2,
                                            cov_process=0.1,
-                                           cov_measure=2) for _ in range(68)]
+                                           cov_measure=1.5) for _ in range(6)]
+    if draw_landmarks == 1:
+        mark_stabilizers68 = [MarkStabilizer(initial_state=[0,0,0,0],
+                                             input_dim=2,
+                                             cov_process=0.1,
+                                             cov_measure=2) for _ in range(68)]
     
     while True:
         frame_got, frame = cam.read()

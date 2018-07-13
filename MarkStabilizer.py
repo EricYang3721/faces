@@ -1,15 +1,17 @@
 '''Stablize face landmark detection with Kalman filter,
 this document support 1D and 2D Kalman filter
-Linear'''
+Linear
+modified from work by yinguobing
+'''
 
 import numpy as np
 import cv2
 
 class MarkStabilizer:
     
-    def __init__(self, input_dim=2, 
+    def __init__(self, initial_state, input_dim=2, 
                  cov_process = 0.001, cov_measure=0.01):
-        '''Initialization the stablilizer'''
+        '''Initialization the stablilizer, 1D for scaler, 2D for 1 point(x y)'''
         
         # Check: only iput dimension 1 or to allowed
         assert input_dim==1 or input_dim==2, "only 1D or 2D allowed"
@@ -24,8 +26,13 @@ class MarkStabilizer:
                                        self.measure_num,
                                        0)
         # Store the state
-        self.state = np.zeros((self.state_num, 1), np.float32)
-        
+        if self.measure_num==1:
+            self.state = np.array([[np.float32(initial_state[0])],[0]])
+        if self.measure_num==2:
+            self.state = np.array([[np.float32(initial_state[0])],
+                                    [np.float32(initial_state[1])],
+                                    [0],
+                                    [0]])
         # store the measurement results
         self.measurement = np.zeros((self.measure_num, 1), np.float32)
         
@@ -64,7 +71,7 @@ class MarkStabilizer:
         
         # Get new measurements
         if self.measure_num == 1:
-            self.measurement = np.array([[np.float32(measurement[0])]])
+            self.measurement = np.array([[np.float32(measurement)]])
         else:
             self.measurement = np.array([[np.float32(measurement[0])],
                                          [np.float32(measurement[1])]])
@@ -74,10 +81,34 @@ class MarkStabilizer:
         
         # update the state value
         self.state = self.filter.statePost
+        
+        
+    
+    def predict(self):
+        # make prediction based on previous results with kalman filter
+        self.prediction = self.filter.predict()
+        self.state = self.prediction
+        return self.state
+    
+    def correct(self, measurement):
+        # Get new measurements
+        if self.measure_num == 1:
+            self.measurement = np.array([[np.float32(measurement)]])
+        else:
+            self.measurement = np.array([[np.float32(measurement[0])],
+                                         [np.float32(measurement[1])]])
+        
+        # correct according to measurement
+        self.filter.correct(self.measurement)
+        # update the state value
+        self.state = self.filter.statePost
+        
+        return self.state
+    
     
     def get_results(self):
         if(self.state_num==2):
-            return [self.state[0]]
+            return self.state[0]
         if(self.state_num==4):
             return [self.state[0], self.state[1]]
        

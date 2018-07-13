@@ -53,24 +53,26 @@ class FaceDetector:
             cv2.rectangle(image, (facebox[0], facebox[1]),
                           (facebox[2], facebox[3]), (0,255,0))
             label= "face: %.4f" % confidence
-            label_size, base_line = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX,
-                                                    0.5,1)
-            cv2.rectangle(image, (facebox[0], facebox[1]-label_size[1]), 
-                          (facebox[0]+label_size[0],
-                           facebox[1]+base_line),
-                           (0,255,0), cv2.FILLED)
+            #label_size, base_line = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5,1)
+#            cv2.rectangle(image, (facebox[0], facebox[1]-label_size[1]), 
+#                          (facebox[0]+label_size[0],
+#                           facebox[1]+base_line),
+#                           (0,255,0), cv2.FILLED)
+            #cv2.circle(image, (facebox[0], facebox[1]), 3, (255,255,255))
+            #cv2.circle(image, (facebox[0], facebox[1]+100), 3, (255,255,255))
             cv2.putText(image, label, (facebox[0], facebox[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0))
 
 def main():
     start_time = time.time()
     detector = FaceDetector()
     process_start = time.time()
     print('time to initiate FaceDetector: ', process_start-start_time)
-    filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
+    filepath = '/home/eric/Documents/face_analysis/data/photos/face.jpg'
     img = cv2.imread(filepath)
     #img = cv2.resize(img, (300,300))    
     conf, box = detector.get_faceboxes(image=img, threshold=0.9)
+    print(box)
     detector.draw_all_results(img)
     print('time to finish processing', time.time()-process_start)
     cv2.imshow('image',img)

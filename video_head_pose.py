@@ -41,8 +41,8 @@ def main():
         if frame_got is False:
             break
         
-        # crop image if needed
-        # frame = cv2.resize(frame, [500, 300])
+         #crop image if needed
+#        frame = cv2.resize(frame, (500, 300))
         
         # flip image if needed in webcam
 #        if video_src ==0:
@@ -63,23 +63,23 @@ def main():
             # get face images from the face boxes and images
             faces = mark_detector.get_face_for_boxes(frame, facebox)
             
-            # get markers from face images
+#            # get markers from face images
             marks = mark_detector.detect_marks(faces)
             marks = mark_detector.fit_markers_in_image(marks, facebox)    
-        
-            # Draw markers if necessary
-            MarkDetector.draw_marks(image=frame, marksFace=marks)
-            
-            # Solve pose by 68 points
-#            r_vect, t_vect = pose_estimator.solve_pose_by_68_points(marks)
-            
-            # Solve pose by 6 points             
+#        
+#            # Draw markers if necessary
+#            MarkDetector.draw_marks(image=frame, marksFace=marks)
+#            
+#            # Solve pose by 68 points
+##            r_vect, t_vect = pose_estimator.solve_pose_by_68_points(marks)
+#            
+#            # Solve pose by 6 points             
             marks = pose_estimator.get_pose_marks(marks)
             r_vect, t_vect = pose_estimator.solve_pose(marks)
 
                 
             
-            # Draw pose boxes on the image
+#            # Draw pose boxes on the image
             pose_estimator.draw_boxes(frame, r_vect, t_vect)
         
         cv2.imshow("preview", frame)

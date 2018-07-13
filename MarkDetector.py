@@ -71,6 +71,8 @@ class MarkDetector:
                 rightB_y +=1
         
         # make sure the box is always squre
+        #print('x: ', rightB_x-leftT_x)
+        #print('y:', rightB_y - leftT_y)
         assert ((rightB_x-leftT_x) == (rightB_y - leftT_y)), 'Box is not square.'
         return [leftT_x, leftT_y, rightB_x, rightB_y]
     
@@ -97,9 +99,21 @@ class MarkDetector:
             # if box is out of image
             ############# need to modify if detect multiple faces
            # if self.box_in_image(facebox, image):
-            boxes.append(facebox)
-            
+            boxes.append(facebox)            
         return boxes
+    
+    def square_single_facebox(self, box):
+        '''given a box from face detector, return a square box'''
+        
+       
+        #print('Box: ', box)
+        diff_height_width = (box[3]-box[1]) - (box[2]-box[0])
+        offset_y = int(abs(diff_height_width/2))
+        box_moved = self.move_box(box, [0, offset_y])            
+        # Make box square
+        #print('box moved: ',box_moved)
+        facebox = self.get_square_box(box_moved)        
+        return facebox
     
     def detect_marks(self, images_np):
         '''Detect makrs from cropped face image. 
@@ -120,11 +134,26 @@ class MarkDetector:
         #print(marks)
         return all_marks
     
+    def detect_marks_on_single_image(self, image):
+        '''Detect makrs from cropped face image, only 1 face 
+        Returns the coordiate/width or length of cropped image '''
+        #Get result tensor by its name
+        logits_tensor = self.graph.get_tensor_by_name('logits/BiasAdd:0')
+        # Actual detection
+        image = cv2.resize(image, (self.cnn_input_size, self.cnn_input_size))
+        predictions = self.sess.run(
+                logits_tensor,
+                feed_dict={'input_image_tensor:0':image})
+        
+        # Convert preditions to landmarks
+        marks = np.array(predictions).flatten()
+        marks = np.reshape(marks, (-1, 2))
+        return marks
+    
+    
     @staticmethod
     def draw_marks(image, marksFace, color=(0,255,0)):
         '''Draw mark points on the image'''
-        rows = image.shape[0]
-        cols = image.shape[1]
         for marks in marksFace:
             for mark in marks:                
                 cv2.circle(image, (int(mark[0]), int(mark[1])), 
@@ -145,6 +174,18 @@ class MarkDetector:
             face_images.append(face_image)
         return face_images
     
+    def get_single_face_from_boxes(self, image, box):
+        '''crop the image with a single given box, make it ready for marker detection'''        
+        ######### Problem to fix if face is out of box
+        if not self.box_in_image(box, image):                
+            face_image = self.crop_at_image_boarder(image, box)
+        else: 
+            face_image = image[box[1]:box[3], box[0]:box[2]]
+            face_image = cv2.resize(face_image, (128,128))
+            face_image = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
+        return face_image
+    
+    
     @staticmethod
     def fit_markers_in_image(markers, boxes):
         for marker, box in zip(markers, boxes):
@@ -152,6 +193,13 @@ class MarkDetector:
             marker[:, 0] += box[0]
             marker[:,1] += box[1]
         return markers    
+    
+    @staticmethod
+    def fit_markers_in_single_image(marker, box):        
+        marker *=(box[2]-box[0])
+        marker[:, 0] += box[0]
+        marker[:,1] += box[1]
+        return marker
     
     @staticmethod
     def crop_at_image_boarder(image, box):

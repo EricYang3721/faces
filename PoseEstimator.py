@@ -66,6 +66,15 @@ class PoseEstimator:
             translation_vectors.append(translation_vector)
         return (rotation_vectors, translation_vectors)
     
+    def solve_single_pose(self, face_point):
+        '''get the roation and translation vectors for a single face'''
+        (_, rotation_vector, translation_vector) = cv2.solvePnP(
+                    self.model_points, 
+                    face_point, 
+                    self.camera_matrix, self.dist_coeffs)
+
+        return (rotation_vector, translation_vector)
+    
     def solve_pose_by_68_points(self, image_points):
         '''Solve pose from all 68 image points return (rotation_vector, 
         translation_vector) as pose'''
@@ -102,6 +111,17 @@ class PoseEstimator:
             pose_marks.append(temp_pose_marks)
         return np.array(pose_marks)
     
+    def get_single_face_pose_marks(self, face_mark):
+        '''get 6 points out of 68 detected ones to match the ones in self.model_points'''
+        pose_marks=[]             
+        pose_marks.append(face_mark[30])    # Nose tip
+        pose_marks.append(face_mark[8])     # Chin
+        pose_marks.append(face_mark[36])    # Left eye left corner
+        pose_marks.append(face_mark[45])    # Right eye right corner
+        pose_marks.append(face_mark[48])    # Left Mouth corner
+        pose_marks.append(face_mark[54])    # Right mouth corner        
+        return np.array(pose_marks)
+    
     def draw_boxes(self, image, rotation_vctors, translation_vectors, color=(0,255,0), line_width=1):
         for r_vec, t_vec in zip(rotation_vctors, translation_vectors):
             self._draw_annotation_box(image, r_vec, t_vec, color=color, line_width=line_width)
@@ -110,7 +130,7 @@ class PoseEstimator:
     def _draw_annotation_box(self, image, rotation_vector, translation_vector, color=(0, 255, 0), line_width=1):
         """Draw a 3D box as annotation of pose"""
         point_3d = []
-        rear_size = 75
+        rear_size = 50
         rear_depth = 0
         point_3d.append((-rear_size, -rear_size, rear_depth))
         point_3d.append((-rear_size, rear_size, rear_depth))
@@ -119,7 +139,7 @@ class PoseEstimator:
         point_3d.append((-rear_size, -rear_size, rear_depth))
 
         front_size = 100
-        front_depth = 100
+        front_depth = 50
         point_3d.append((-front_size, -front_size, front_depth))
         point_3d.append((-front_size, front_size, front_depth))
         point_3d.append((front_size, front_size, front_depth))
@@ -135,7 +155,7 @@ class PoseEstimator:
                                           self.camera_matrix,
                                           self.dist_coeffs)
         point_2d = np.int32(point_2d.reshape(-1, 2))
-
+        # print('2D points', point_2d)
         # Draw all the lines
         cv2.polylines(image, [point_2d], True, color, line_width, cv2.LINE_AA)
         cv2.line(image, tuple(point_2d[1]), tuple(
@@ -144,7 +164,25 @@ class PoseEstimator:
             point_2d[7]), color, line_width, cv2.LINE_AA)
         cv2.line(image, tuple(point_2d[3]), tuple(
             point_2d[8]), color, line_width, cv2.LINE_AA)
-
+        return image
+    
+    def _draw_annotation_arrow(self, image, rotation_vector, translation_vector, color=(0, 255, 0), line_width=1):
+        '''draw arrow as the head pose direction (direction facing to), single face only'''
+        points_3D=[]
+        rear_point_3D = [0,0,0]
+        front_point_3D = [0,0,100]
+        points_3D.append(rear_point_3D)
+        points_3D.append(front_point_3D)
+        points_3D = np.array(points_3D, dtype=np.float).reshape(-1, 3)
+        (points_2d, _) = cv2.projectPoints(points_3D,
+                                          rotation_vector,
+                                          translation_vector,
+                                          self.camera_matrix,
+                                          self.dist_coeffs)
+        points_2d = np.int32(points_2d.reshape(-1, 2))
+        cv2.arrowedLine(image, tuple(points_2d[0]), tuple(points_2d[1]), (255,0,0), 2, tipLength=0.5)
+        return image
+        
 def main():
     
     from MarkDetector import MarkDetector
@@ -166,12 +204,15 @@ def main():
     #r_vect, t_vect = pose.solve_pose_by_68_points(marks)
     marks = pose.get_pose_marks(marks)    
     pp = pose.solve_pose(marks)
+    tt = pose.solve_single_pose(marks[0])
+    print(tt)
+    print(np.array(tt).flatten())
     r_vect, t_vect = pp
     pose_np = np.array(pp).flatten()
-    print(pp)
-    print(pose_np)
+    #print(pp)
+    #print(pose_np)
     stabile_pose = np.reshape(pose_np, (-1, 3))
-    print(stabile_pose)
+    #print(stabile_pose)
     pose.draw_boxes(img, r_vect, t_vect)
     #MarkDetector.draw_marks(image=img, marks=marks)
     #detector.draw_all_results(img)

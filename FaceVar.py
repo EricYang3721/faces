@@ -13,7 +13,7 @@ MAX_TRACE_LENGTH=20
 MIN_HITS = 10
 
 # no.of consecutive unmatched detection before a track is deleted
-MAX_AGE = 75
+MAX_AGE = 45
 
 # IOU threshold for detection-tracks assignement
 IOU_THRESHOLD = 0.3
@@ -21,8 +21,11 @@ IOU_THRESHOLD = 0.3
 # Number of frames to trace the face bonding boxes
 FACEBOX_TRACE_LENGTH = 20
 
-# Wheter draw face detection box
+# Whether draw face detection box after kalman filter
 DRAW_DETECTION_BOX = True
+
+# Whether draw original bonding box from detector
+DRAW_ORIG_BBOX = True 
 
 #===============Landmakr tracking parameter=======================
 # Turn on landmark tracking or not: true--on, false--off

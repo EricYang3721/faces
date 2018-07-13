@@ -11,7 +11,7 @@ from kf_2points import kf_2points
 from collections import deque
 import numpy as np
 import glob
-from face_utils import box_iou2, draw_box_on_image, draw_marks_on_image
+from face_utils import box_iou2, draw_box_on_image, draw_marks_on_image, draw_BBox
 from scipy.optimize import linear_sum_assignment
 import cv2
 from FaceDetector import FaceDetector
@@ -19,6 +19,7 @@ import time
 from MarkDetector import MarkDetector
 from MarkStabilizer import MarkStabilizer
 from PoseEstimator import PoseEstimator
+
 
 class Track():
     ''' Track class for each bonding box'''
@@ -287,7 +288,8 @@ class Tracker():
         # good_track_list = []
         for trk in self.tracks:
             if trk.hits >= FaceVar.MIN_HITS and trk.num_loss <= FaceVar.MAX_AGE:
-                # good_track_list.append(trk)                
+                # good_track_list.append(trk)
+
                 if FaceVar.DRAW_DETECTION_BOX:
                     img = draw_box_on_image(img, trk)
                 if FaceVar.LADNMARK_ON:
@@ -316,6 +318,7 @@ def main():
     for image in images_seq:
         start = time.time()
         conf, boxes = detector.get_faceboxes(image=image, threshold=0.9)
+       
         #print(boxes)
         matches, unmatched_dets, unmatched_tracks = tracker.assign_detections_to_trackers(boxes)
         #print('matches: ',matches)
@@ -324,9 +327,11 @@ def main():
         tracker.update(image, boxes, matches, unmatched_dets, unmatched_tracks)
         
         image = tracker.annotate_BBox(image)
+        if FaceVar.DRAW_ORIG_BBOX:
+            image = draw_BBox(image=image, faceboxes=boxes, confidences=conf) 
         cv2.putText(image, 'Frame: '+str(index), (15, 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0))
-        cv2.imwrite('image_seq'+str(index)+'.jpg', image)
+        #cv2.imwrite('image_seq'+str(index)+'.jpg', image)
         print(time.time()-start)
         cv2.imshow('image_seq'+str(index), image)
         

@@ -51,3 +51,29 @@ def draw_marks_on_image(image, track, color=(0,255,0)):
         cv2.circle(image, (int(mark[0]), int(mark[1])), 
                        1, color, -1, cv2.LINE_AA)            
     return image
+
+#def draw_Bbox(image, Bbox):
+#        ''''Draw the tracking results on a single image. 
+#        Input: image -- a image
+#                track -- a single track object'''        
+# 
+#    cv2.rectangle(image, (Bbox[0], Bbox[1]), (Bbox[2], Bbox[3]), (0,0,255))
+#    return image
+
+def draw_BBox(image, faceboxes, confidences):
+    '''Draw the detected bounding boxes on image, before kalman filter.'''
+    
+    for facebox, confidence in zip(faceboxes, confidences):
+        cv2.rectangle(image, (facebox[0], facebox[1]),
+                          (facebox[2], facebox[3]), (210,250,250))
+        label= "face: %.4f" % confidence
+            #label_size, base_line = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5,1)
+#            cv2.rectangle(image, (facebox[0], facebox[1]-label_size[1]), 
+#                          (facebox[0]+label_size[0],
+#                           facebox[1]+base_line),
+#                           (0,255,0), cv2.FILLED)
+            #cv2.circle(image, (facebox[0], facebox[1]), 3, (255,255,255))
+            #cv2.circle(image, (facebox[0], facebox[1]+100), 3, (255,255,255))
+        cv2.putText(image, label, (facebox[2]-110, facebox[3]-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (210,250,250))
+    return image

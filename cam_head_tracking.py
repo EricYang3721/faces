@@ -10,7 +10,7 @@ from kf_2points import kf_2points
 from collections import deque
 import numpy as np
 import glob
-from face_utils import box_iou2, draw_box_on_image, draw_marks_on_image
+from face_utils import box_iou2, draw_box_on_image, draw_marks_on_image, draw_BBox
 from scipy.optimize import linear_sum_assignment
 import cv2
 from FaceDetector import FaceDetector
@@ -20,9 +20,19 @@ from MarkStabilizer import MarkStabilizer
 from PoseEstimator import PoseEstimator
 from kf_FaceTracker import Tracker
 
+def make_resolution(cam, x, y):
+    cam.set(3, x)
+    cam.set(4, y)
+
+def make_480p(cam):
+    cam.set(3, 640)
+    cam.set(4, 480)
+
+
 def main():
     video_src = 0  # 0 means webcam; set file name if video
     cam = cv2.VideoCapture(video_src)
+    # make_resolution(cam, 1200, 600)
     _, sample_frame = cam.read()  # get 1 sample frame to setup codes
     height, width = sample_frame.shape[:2]
     face_detector = FaceDetector()
@@ -37,7 +47,8 @@ def main():
         matches, unmatched_dets, unmatched_tracks = tracker.assign_detections_to_trackers(boxes)
         tracker.update(frame, boxes, matches, unmatched_dets, unmatched_tracks)
         frame = tracker.annotate_BBox(frame)
-        
+        if FaceVar.DRAW_ORIG_BBOX:
+            frame = draw_BBox(image=frame, faceboxes=boxes, confidences=conf)  
         # if facebox is not None:(image=frame, marksFace=stabilized_marks68)            
             
            

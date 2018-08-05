@@ -4,12 +4,16 @@ import numpy as np
 import cv2
 import time
 class PoseEstimator:
-    '''Estimate head pose by the facial landmarks'''
+    '''Estimate head pose by the facial landmarks by mapping the detected facial landmarks
+    to the landmar locations of an average face.
+    2 methods are available here. It could use 6 landmarks (self.model_points) or all
+    68 landmarks (self.model_points_68)'''
     
     def __init__(self, img_size=(480, 640)):
+        #initialzize image size
         self.size = img_size
         
-        # 3D model points
+        # 3D model points for the average face (6 points);
         self.model_points = np.array([
             (0.0, 0.0, 0.0),             # Nose tip
             (0.0, -330.0, -65.0),        # Chin
@@ -18,7 +22,8 @@ class PoseEstimator:
             (-150.0, -150.0, -125.0),    # Left Mouth corner
             (150.0, -150.0, -125.0)      # Right mouth corner
         ]) / 4.5
-    
+        
+        # 3D model points for average face(68points)
         self.model_points_68 = self._get_full_model_points()
         
         # Cameral parameters
@@ -44,6 +49,10 @@ class PoseEstimator:
 
         
     def _get_full_model_points(self, filename='models/model_landmark.txt'):
+        ''' To obtain the coordinates of 68 landmarks for the average face.
+        Input: filename --- the path to the txt file
+        Output: model_points --- 68 by 3 Numpy array of the landmarks
+        '''
         raw_value = []
         with open(filename) as file:
             for line in file:
@@ -54,7 +63,13 @@ class PoseEstimator:
         return model_points
     
     def solve_pose(self, image_points):
-        '''get the roation and translation vectors'''
+        '''get the roation and translation vectors from the detected 2D landmarks and 
+        3D landmarks of the average face, and camera parameters. For multiple faces at
+        the same time.
+        Input: image_points --- 2D landmarks from landmark detector. List of n faces, each face
+            with 68 points, each points with 2 entries [x, y].
+        Output: rotation_vectors --- list of rotation vectors for mapping 3D points to 2D plane for all faces.
+        Translation_vectors --- list of translation vectors for mapping 3D points to 2D plane for all faces.'''
         rotation_vectors=[]
         translation_vectors=[]
         for face_point in image_points:
@@ -67,7 +82,11 @@ class PoseEstimator:
         return (rotation_vectors, translation_vectors)
     
     def solve_single_pose(self, face_point):
-        '''get the roation and translation vectors for a single face'''
+        '''get the roation and translation vectors for a single face.
+        Input: face_point --- the landmarks (6 or 68) used to find the rotation and translation 
+                            vectors
+        Output: rotation_vector --- rotation vector for mapping 3D points on 2D plane, single face
+                translation_vector --- translation vector for mapping 3D points on 2D plane, single face'''
         (_, rotation_vector, translation_vector) = cv2.solvePnP(
                     self.model_points, 
                     face_point, 
@@ -76,8 +95,11 @@ class PoseEstimator:
         return (rotation_vector, translation_vector)
     
     def solve_pose_by_68_points(self, image_points):
-        '''Solve pose from all 68 image points return (rotation_vector, 
-        translation_vector) as pose'''
+        '''Solve multiple poses from all 68 image points return (rotation_vector, 
+        translation_vector) as pose
+        Input: image_points --- list of n faces, each face contains 68 2D landmars points
+        Output: rotation_vectors --- list of rotation vectors mapping 3D points on 2D plane, multiple faces
+                translation_vectors --- list of translation vectors mapping 3D points on 2D plane, multiple faces'''
         rotation_vectors=[]
         translation_vectors=[]        
         for face_point in image_points:
@@ -98,7 +120,11 @@ class PoseEstimator:
         return (rotation_vectors, translation_vectors)
     
     def get_pose_marks(self, marks):
-        '''get 6 points out of 68 detected ones to match the ones in self.model_points'''
+        '''get 6 points out of 68 detected ones matching the ones in self.model_points (6 3D points), 
+        the results are used to mapping from 3D to 2D plane.
+        Input: marks --- list of landmarks containing n faces. Each face has 68 landmakrs
+        Output: np.array(pose_marks) --- list of landmarks containing n faces, each face has 6 landmarks 
+        '''
         pose_marks=[]
         for mark in marks:
             temp_pose_marks=[]
@@ -112,7 +138,11 @@ class PoseEstimator:
         return np.array(pose_marks)
     
     def get_single_face_pose_marks(self, face_mark):
-        '''get 6 points out of 68 detected ones to match the ones in self.model_points'''
+        '''get 6 points out of 68 detected ones to match the ones in self.model_points, 
+        only for a single face
+        Input: face_mark --- a list of 68 landmarks for a single face
+        Output: np.array(pose_marks) --- a list of 6 landmarks for a single face'''
+        
         pose_marks=[]             
         pose_marks.append(face_mark[30])    # Nose tip
         pose_marks.append(face_mark[8])     # Chin
@@ -123,24 +153,39 @@ class PoseEstimator:
         return np.array(pose_marks)
     
     def draw_boxes(self, image, rotation_vctors, translation_vectors, color=(0,255,0), line_width=1):
+        '''draw annotation boxes for multiple faces on an image. The each annotation box indicate pose of
+        each head. Simply by calling the function to drawn each face with its mapping (transaltion and rotation vector).
+        Input: image --- the image to be drawn on
+            rotation_vectors --- list of mapping from 3D to 2D plane containing n vectors for n faces
+            translation_vectors --- list of mapping from 3D to 2D plane containing n vectors for n faces
+            '''
         for r_vec, t_vec in zip(rotation_vctors, translation_vectors):
+            # get translation and rotation vector to drawn head pose for individual faces 
             self._draw_annotation_box(image, r_vec, t_vec, color=color, line_width=line_width)
     
     
     def _draw_annotation_box(self, image, rotation_vector, translation_vector, color=(0, 255, 0), line_width=1):
-        """Draw a 3D box as annotation of pose"""
-        point_3d = []
-        rear_size = 50
-        rear_depth = 0
-        point_3d.append((-rear_size, -rear_size, rear_depth))
+        """Draw a 3D box as annotation of head pose for a single face. Each head pose annotation contains
+        a smaller square on face surface, and a larger sqaure in front of the smaller one. The openning
+        of the 2 squares indicate the orientation of head pose.
+        Input: 
+            image --- image to be drawn on.
+            rotation_vector --- a mapping vector for a single face from 3D to 2D plane (rotation)
+            translation_vector --- a mapping vector for single face from 3D to 2D plane (translation)
+        Output: image --- the annotated image
+            """
+        point_3d = []  # a list to save the 3D points to show head pose
+        rear_size = 50 # smaller square edge length
+        rear_depth = 0 # distance between small squares to nose tip
+        point_3d.append((-rear_size, -rear_size, rear_depth)) # get all 4 points for small squared
         point_3d.append((-rear_size, rear_size, rear_depth))
         point_3d.append((rear_size, rear_size, rear_depth))
         point_3d.append((rear_size, -rear_size, rear_depth))
         point_3d.append((-rear_size, -rear_size, rear_depth))
 
-        front_size = 100
-        front_depth = 50
-        point_3d.append((-front_size, -front_size, front_depth))
+        front_size = 100 # larger square edge length
+        front_depth = 50 # distance between large squares to nose tip
+        point_3d.append((-front_size, -front_size, front_depth)) # all 4 points for larger square
         point_3d.append((-front_size, front_size, front_depth))
         point_3d.append((front_size, front_size, front_depth))
         point_3d.append((front_size, -front_size, front_depth))
@@ -154,10 +199,10 @@ class PoseEstimator:
                                           translation_vector,
                                           self.camera_matrix,
                                           self.dist_coeffs)
-        point_2d = np.int32(point_2d.reshape(-1, 2))
+        point_2d = np.int32(point_2d.reshape(-1, 2)) # convert to integer for pixels
         # print('2D points', point_2d)
         # Draw all the lines
-        cv2.polylines(image, [point_2d], True, color, line_width, cv2.LINE_AA)
+        cv2.polylines(image, [point_2d], True, color, line_width, cv2.LINE_AA) 
         cv2.line(image, tuple(point_2d[1]), tuple(
             point_2d[6]), color, line_width, cv2.LINE_AA)
         cv2.line(image, tuple(point_2d[2]), tuple(
@@ -167,19 +212,27 @@ class PoseEstimator:
         return image
     
     def _draw_annotation_arrow(self, image, rotation_vector, translation_vector, color=(0, 255, 0), line_width=1):
-        '''draw arrow as the head pose direction (direction facing to), single face only'''
-        points_3D=[]
-        rear_point_3D = [0,0,0]
-        front_point_3D = [0,0,100]
+        '''draw arrow as the head pose direction (direction facing to), single face only.
+        Input: 
+            image --- image to be drawn on.
+            rotation_vector --- a mapping vector for a single face from 3D to 2D plane (rotation)
+            translation_vector --- a mapping vector for single face from 3D to 2D plane (translation)
+        Output: image --- the annotated image
+        '''
+        points_3D=[] # a list to store the 3D points to draw
+        rear_point_3D = [0,0,0] # the rear point for the arrow
+        front_point_3D = [0,0,100] # the point for the tip of the array
         points_3D.append(rear_point_3D)
         points_3D.append(front_point_3D)
         points_3D = np.array(points_3D, dtype=np.float).reshape(-1, 3)
+        # map the 3D points onto 2D image plane
         (points_2d, _) = cv2.projectPoints(points_3D,
                                           rotation_vector,
                                           translation_vector,
                                           self.camera_matrix,
                                           self.dist_coeffs)
-        points_2d = np.int32(points_2d.reshape(-1, 2))
+        points_2d = np.int32(points_2d.reshape(-1, 2)) # convert to integer
+        # draw on image plane
         cv2.arrowedLine(image, tuple(points_2d[0]), tuple(points_2d[1]), (255,0,0), 2, tipLength=0.5)
         return image
         
@@ -190,30 +243,29 @@ def main():
     pose = PoseEstimator()
     start_time = time.time()
     filepath = '/home/eric/Documents/face_analysis/data/photos/group.jpg'
-    img = cv2.imread(filepath)
+    img = cv2.imread(filepath)    
     
-    
-    boxes = markDetector.extract_cnn_facebox(image=img)
-    face_imgs = markDetector.get_face_for_boxes(img, boxes)
-    marks = markDetector.detect_marks(face_imgs)
-    marks = markDetector.fit_markers_in_image(marks, boxes)    
+    boxes = markDetector.extract_cnn_facebox(image=img)  # extract bonding boxes
+    face_imgs = markDetector.get_face_for_boxes(img, boxes) # extract face images by bonding boxes
+    marks = markDetector.detect_marks(face_imgs)  # detect landmarks on the cropped images
+    marks = markDetector.fit_markers_in_image(marks, boxes) # get the landmark coordinates on the original images
     
     
     
     ### 2 different function: choose first or last 2    
     #r_vect, t_vect = pose.solve_pose_by_68_points(marks)
-    marks = pose.get_pose_marks(marks)    
-    pp = pose.solve_pose(marks)
-    tt = pose.solve_single_pose(marks[0])
-    print(tt)
-    print(np.array(tt).flatten())
+    marks = pose.get_pose_marks(marks)    # select 6 points out of 68
+    pp = pose.solve_pose(marks)   # get the mapping from 3D points to 2D points
+#    tt = pose.solve_single_pose(marks[0]) # debug single face function
+#    print(tt)
+#    print(np.array(tt).flatten())
     r_vect, t_vect = pp
-    pose_np = np.array(pp).flatten()
+    pose_np = np.array(pp).flatten() 
     #print(pp)
     #print(pose_np)
-    stabile_pose = np.reshape(pose_np, (-1, 3))
+#    stabile_pose = np.reshape(pose_np, (-1, 3))
     #print(stabile_pose)
-    pose.draw_boxes(img, r_vect, t_vect)
+    pose.draw_boxes(img, r_vect, t_vect) # draw annotation for head pose on image
     #MarkDetector.draw_marks(image=img, marks=marks)
     #detector.draw_all_results(img)
     

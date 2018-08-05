@@ -1,5 +1,5 @@
 #========== Global Tracking vars ==============
-
+'''The variables for Face, landmakr, head pose tracking system.'''
 # Face bonding box measurement covariance for kalman filter kf_2points
 COV_MEASUREMENT=0.001
 

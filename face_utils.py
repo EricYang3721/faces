@@ -61,7 +61,10 @@ def draw_marks_on_image(image, track, color=(0,255,0)):
 #    return image
 
 def draw_BBox(image, faceboxes, confidences):
-    '''Draw the detected bounding boxes on image, before kalman filter.'''
+    '''Draw the originally detected bounding boxes on image from the face detector.
+    Inpit: image --- the image where the detection come from
+        faceboxes --- face bonding box from the face detector
+        confidences --- confidence score of the face detection'''
     
     for facebox, confidence in zip(faceboxes, confidences):
         cv2.rectangle(image, (facebox[0], facebox[1]),

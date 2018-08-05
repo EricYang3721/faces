@@ -8,10 +8,16 @@ import numpy as np
 import cv2
 
 class MarkStabilizer:
+    '''A kalman filter for 1D or 2D points'''
     
     def __init__(self, initial_state, input_dim=2, 
                  cov_process = 0.001, cov_measure=0.01):
-        '''Initialization the stablilizer, 1D for scaler, 2D for 1 point(x y)'''
+        '''Initialization the stablilizer, 1D for scaler, 2D for 1 point(x y)
+        Input: initial_state --- a list of integers to initialize kalman filter
+                            1 entry for 1D point, 2 entries for 2D points.
+                input_dim --- the dimension of the points for kalman filter. 1 or 2.
+                cov_process --- process covarience
+                cov_measure --- measure covariance'''
         
         # Check: only iput dimension 1 or to allowed
         assert input_dim==1 or input_dim==2, "only 1D or 2D allowed"
@@ -25,7 +31,7 @@ class MarkStabilizer:
         self.filter = cv2.KalmanFilter(self.state_num,
                                        self.measure_num,
                                        0)
-        # Store the state
+        # Store the initial state
         if self.measure_num==1:
             self.state = np.array([[np.float32(initial_state[0])],[0]])
         if self.measure_num==2:
@@ -33,10 +39,10 @@ class MarkStabilizer:
                                     [np.float32(initial_state[1])],
                                     [0],
                                     [0]])
-        # store the measurement results
+        # initialize the measurements with 0s
         self.measurement = np.zeros((self.measure_num, 1), np.float32)
         
-        # Store the prediction 
+        # initialize the prediction results with 0s  
         self.prediction = np.zeros((self.state_num, 1), np.float32)
         
         # Kalman filter parameters setup for 1D
@@ -65,7 +71,9 @@ class MarkStabilizer:
                                                         [0,1]], np.float32)*cov_measure
     
     def update(self, measurement):
-        '''update the kalman filter'''
+        '''update the kalman filter, containing both prediction by previous results, and the 
+        correction with new measurements. Results are stored in the self.state.
+        Input: measurement --- the new measurement to update kalman filter'''
         # make prediction based on previous results with kalman filter
         self.prediction = self.filter.predict()
         
@@ -88,10 +96,11 @@ class MarkStabilizer:
         # make prediction based on previous results with kalman filter
         self.prediction = self.filter.predict()
         self.state = self.prediction
+        # return the prediction results
         return self.state
     
     def correct(self, measurement):
-        # Get new measurements
+        # Correct the prediciton with new measurements
         if self.measure_num == 1:
             self.measurement = np.array([[np.float32(measurement)]])
         else:
@@ -103,10 +112,12 @@ class MarkStabilizer:
         # update the state value
         self.state = self.filter.statePost
         
+        # return corrected results
         return self.state
     
     
     def get_results(self):
+        # get the state of the kalman filter
         if(self.state_num==2):
             return self.state[0]
         if(self.state_num==4):
@@ -124,7 +135,7 @@ def main():
 
     cv2.namedWindow("kalman")
     cv2.setMouseCallback("kalman", onmouse)
-    kalman = MarkStabilizer(2, 1, 1)
+    kalman = MarkStabilizer([0,0], 2, 1, 1)
     frame = np.zeros((480, 640, 3), np.uint8)  # drawing canvas
 
     while True:

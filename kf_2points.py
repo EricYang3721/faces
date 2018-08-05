@@ -2,9 +2,20 @@
 import numpy as np
 import cv2
 
+''' Tracker with 2 2D points at the same time. This is used to kalman filter the 
+face bonding boxes between frame (or the arrow indicating head pose). It is easier to 
+use compare to use 2 individual kalman filters for each point on the box.'''
+
+
 class kf_2points:
-    '''Kalman filter with 2 ponits (x, y) on an image'''
+    '''Kalman filter with 2 2D ponits (x, y) on an image'''
     def __init__(self, initial_state, cov_process = 0.001, cov_measure=0.01):
+        '''Initialize the kalman filter.
+        Input: initial_state --- the state to initialize the kalman filter. 
+                                a list of 4 elements[x1, y1, x2, y2]
+            cov_process --- process covariance
+            cov_meansure --- measurement covariance'''
+        # input dimension
         self.input_dim = 4
         
         # Set up process and input dimensions
@@ -12,8 +23,7 @@ class kf_2points:
         self.measure_num = self.input_dim
 
         # initiate filter from opencv
-        # No control parameter for now
-        
+        # No control parameter for now        
         self.filter = cv2.KalmanFilter(self.state_num,
                                        self.measure_num,
                                        0)
@@ -32,6 +42,7 @@ class kf_2points:
         # Store the prediction 
         self.prediction = np.zeros((self.state_num, 1), np.float32)
         
+        # set up the parameters for the kalmanfilter
         self.filter.transitionMatrix = np.array([[1,0,0,0,1,0,0,0],
                                                  [0,1,0,0,0,1,0,0],
                                                  [0,0,1,0,0,0,1,0],
@@ -49,10 +60,12 @@ class kf_2points:
         self.filter.measurementNoiseCov = np.eye(self.measure_num, dtype=np.float32)*cov_measure
         
     def predict(self):
+        # make predictions with previous results, and return prediction 
         self.prediction = self.filter.predict()
         return self.prediction
     
     def correct(self, measurement):
+        # correct the prediction with new measurements, and return the new state
         self.measurement = np.array([[np.float32(measurement[0])],
                                      [np.float32(measurement[1])],
                                      [np.float32(measurement[2])],
@@ -64,6 +77,7 @@ class kf_2points:
         return self.state
     
     def get_results(self):
+        # get the new corrected state, and arrange them in a list
         return [(int)(self.state[0]), (int)(self.state[1]), (int)(self.state[2]), (int)(self.state[3])]
     
 
@@ -80,7 +94,7 @@ def main():
 
     cv2.namedWindow("kalman")
     cv2.setMouseCallback("kalman", onmouse)
-    kalman = kf_2points(1, 1)
+    kalman = kf_2points([0,0,0,0], 1, 1)
     frame = np.zeros((480, 640, 3), np.uint8)  # drawing canvas
 
     while True:

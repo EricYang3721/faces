@@ -1,5 +1,6 @@
 '''Landmark detector by Convolutional neural network
-modified from work by yinguobing'''
+modified from work by yinguobing
+-- Eric Yang'''
 import cv2
 import tensorflow as tf
 import numpy as np
@@ -8,9 +9,10 @@ import time
 
 class MarkDetector:
     def __init__(self, mark_model='models/landmark_detector/frozen_inference_graph.pb'):
-        self.face_detector = FaceDetector()
-        
-        self.cnn_input_size=128
+        '''initialize MarkDetector
+        Input: mark_model --- path to the tensorflow model'''
+        self.face_detector = FaceDetector()   # Initialize face detector
+        self.cnn_input_size=128  # CNN input dimension
         self.marks = None
         
         # Get a tensorflow session ready for landmark detection
@@ -27,14 +29,25 @@ class MarkDetector:
         
     @staticmethod
     def draw_box(image, boxes, box_color=(255,255,255)):
-        '''Draw square boxes on images'''
+        '''Draw a list of boxes on a image,
+        Input: image --- the image to be drawn on
+                boxes --- n by 4 list of boxes. 
+                box_color --- color of boxes
+        '''
         for box in boxes:
             cv2.rectangle(image, (box[0], box[1]),
                           (box[2], box[3]), box_color)
             
     @staticmethod
     def move_box(box, offset):
-        '''Move the boxt to direction specified by a vector offset'''
+        '''Move the boxt to direction specified by a vector offset. FaceDetector output bonding 
+        boxes mainly contains the lower part (face part) of the boxes, but the Landmark detector is 
+        trained on larger image including entire head, hence, need to offset and expend the box for CNN
+        landmark detection.
+        -------------------------------------------------------------------------------------------
+        Input: box --- a list of 4 elements from a single bonding box
+            offset --- the offset for the bonding box
+        Output: [leftT_x, leftT_y, rightB_x, rightB_y] --- a list of new locations for a bonding box'''
         leftT_x = box[0] + offset[0]
         leftT_y = box[1]+offset[1]
         rightB_x = box[2]+offset[0]
@@ -43,7 +56,13 @@ class MarkDetector:
     
     @staticmethod
     def get_square_box(box):
-        '''Get a square box out by expanding a given box'''
+        '''Get a square box out by expanding a given box. FaceDetector output bonding 
+        boxes mainly contains the lower part (face part) of the boxes, but the Landmark detector is 
+        trained on larger image including entire head, hence, need to offset and expend the box for CNN
+        landmark detection.
+        -----------------------------------------------------------------------------------------
+        Input: box --- a list of 4 elements representing a single bonding box
+        Output: [leftT_x, leftT_y, rightB_x, rightB_y] --- a list of new locations for an expanded bonding box'''
         leftT_x = box[0]
         leftT_y = box[1]
         rightB_x = box[2]
@@ -71,29 +90,32 @@ class MarkDetector:
                 rightB_y +=1
         
         # make sure the box is always squre
-        #print('x: ', rightB_x-leftT_x)
-        #print('y:', rightB_y - leftT_y)
         assert ((rightB_x-leftT_x) == (rightB_y - leftT_y)), 'Box is not square.'
         return [leftT_x, leftT_y, rightB_x, rightB_y]
     
     @staticmethod
     def box_in_image(box, image):
-        '''check if the box could fit in the image'''
+        '''check if the box could fit in the image
+        Input: box --- a single bonding box
+                image --- the input image for face and landmark detection
+        Output: boolean results whether the offsetted and expanded box is inside image'''
         rows = image.shape[0]
         cols = image.shape[1]
         return box[0] >=0 and box[1] >=0 and box[2] <=cols and box[3] <=rows
     
     
     def extract_cnn_facebox(self, image):
-        """Extract face area from image. Returns the box coordinates"""
-        _, raw_boxes = self.face_detector.get_faceboxes(image, threshold=0.9)
+        """Detect faces from a single image. Returns the box coordinates
+        Input: image --- a single image for face dtection
+        Output: boxes --- n by 4, list of bonding boxes after offsetting and expansion"""
+        _, raw_boxes = self.face_detector.get_faceboxes(image, threshold=0.9)  # get the raw boxes from face detector
         boxes=[]
         for box in raw_boxes:
-            diff_height_width = (box[3]-box[1]) - (box[2]-box[0])
-            offset_y = int(abs(diff_height_width/2))
-            box_moved = self.move_box(box, [0, offset_y])
+            diff_height_width = (box[3]-box[1]) - (box[2]-box[0]) # height-width difference
+            offset_y = int(abs(diff_height_width/2)) 
+            box_moved = self.move_box(box, [0, offset_y]) # offset the box
             
-            # Make box square
+            # expand box to be a square
             facebox = self.get_square_box(box_moved)
             
             # if box is out of image
@@ -103,7 +125,9 @@ class MarkDetector:
         return boxes
     
     def square_single_facebox(self, box):
-        '''given a box from face detector, return a square box'''
+        '''given a box from face detector, return a offsetted and squared box
+        Input: box --- a raw bonding box from FaceDetector
+        Return: facebox --- the offsetted and expanded bonding box'''
         
        
         #print('Box: ', box)
@@ -116,8 +140,12 @@ class MarkDetector:
         return facebox
     
     def detect_marks(self, images_np):
-        '''Detect makrs from cropped face image. 
-        Returns the coordiate/width or length of cropped image __ image_np'''
+        '''Detect makrs from cropped face images. 
+        Input: images_np --- a list of images
+        Output: all_marks --- list of landmarks for all input face images, 
+            all_marks[i] = marks for ith face,
+            all_marks[i][j] = a 2D list of coordinate [x, y] for ith face and jth landmark
+        '''
         #Get result tensor by its name
         logits_tensor = self.graph.get_tensor_by_name('logits/BiasAdd:0')
         all_marks = []
@@ -136,7 +164,9 @@ class MarkDetector:
     
     def detect_marks_on_single_image(self, image):
         '''Detect makrs from cropped face image, only 1 face 
-        Returns the coordiate/width or length of cropped image '''
+        Returns the coordiate/width or length of cropped image 
+        Input: image --- the cropped face image
+        Output: a list of 2D face landmarks'''
         #Get result tensor by its name
         logits_tensor = self.graph.get_tensor_by_name('logits/BiasAdd:0')
         # Actual detection
@@ -153,20 +183,30 @@ class MarkDetector:
     
     @staticmethod
     def draw_marks(image, marksFace, color=(0,255,0)):
-        '''Draw mark points on the image'''
-        for marks in marksFace:
-            for mark in marks:                
+        '''Draw mark a series of landmarks on a image with multiple faces
+        Input: image -- image to be drawn on
+                marksFace --- list of landmarks for all faces on an image, 
+                marksFace[i] = marks for ith face,
+                marksFace[i][j] = a 2D list of coordinate [x, y] for ith face and jth landmark'''
+        for marks in marksFace:  # each face
+            for mark in marks: # each mark  
                 cv2.circle(image, (int(mark[0]), int(mark[1])), 
                        1, color, -1, cv2.LINE_AA)
     
     def get_face_for_boxes(self, image, boxes):
-        '''crop the image with given box, make it ready for marker detection'''
+        '''crop the image and given boxes, crop the images with these boxes and 
+        make them ready for marker detection
+        Input: image --- the original image to crop faces from
+                boxes --- the bonding boxes assciated with all faces on a single image
+        Output: a list of cropped image based on the boxes'''
         
         ######### Problem to fix if face is out of box
         face_images = []
         for box in boxes:
-            if not self.box_in_image(box, image):                
-                face_image = self.crop_at_image_boarder(image, box)
+            if not self.box_in_image(box, image):  
+                # check if a boxing box is inside the image               
+                # if not paddig the empty area by copying the pixels next to it 
+                face_image = self.crop_at_image_boarder(image, box)         
             else: 
                 face_image = image[box[1]:box[3], box[0]:box[2]]
             face_image = cv2.resize(face_image, (128,128))
@@ -175,9 +215,14 @@ class MarkDetector:
         return face_images
     
     def get_single_face_from_boxes(self, image, box):
-        '''crop the image with a single given box, make it ready for marker detection'''        
-        ######### Problem to fix if face is out of box
-        if not self.box_in_image(box, image):                
+        '''crop the image with a single given box, make it ready for marker detection
+        Input: image --- the original image to crop faces from
+                box --- a single bonding box to cromp the image
+        Output: face_image --- a single face image cropped from input image'''        
+       
+        if not self.box_in_image(box, image):          
+            # check if a boxing box is inside the image               
+            # if not paddig the empty area by copying the pixels next to it 
             face_image = self.crop_at_image_boarder(image, box)
         else: 
             face_image = image[box[1]:box[3], box[0]:box[2]]
@@ -188,6 +233,13 @@ class MarkDetector:
     
     @staticmethod
     def fit_markers_in_image(markers, boxes):
+        '''Landmarks are detected based on the face images sent into the CNN, which are
+        cropped from the original image, therefore, the coordinates of the landmars are based on cropped
+        face images. Here we fit the landmark cooridinates into the original (big images)
+        Input: markers --- list of the coordinates of the landmarks on cropped image
+                boxes --- list of the coordinate of the bonding boxes on original (un-cropped) image
+        Output: markers -- list of the coordinates of markers based on original image'''
+            
         for marker, box in zip(markers, boxes):
             marker *=(box[2]-box[0])
             marker[:, 0] += box[0]
@@ -196,6 +248,12 @@ class MarkDetector:
     
     @staticmethod
     def fit_markers_in_single_image(marker, box):        
+        '''Landmarks are detected based on the face images sent into the CNN, which are
+        cropped from the original image, therefore, the coordinates of the landmars are based on cropped
+        face images. Here we fit the landmark cooridinates into the original (big images)
+        Input: marker --- the coordinates of the landmarks for a single face on cropped image
+                boxes --- the coordinate of the bonding boxes for a single face on original (un-cropped) image
+        Output: markers -- the coordinates of markers for a single face based on original image'''
         marker *=(box[2]-box[0])
         marker[:, 0] += box[0]
         marker[:,1] += box[1]
@@ -204,14 +262,17 @@ class MarkDetector:
     @staticmethod
     def crop_at_image_boarder(image, box):
         '''when cropping image with box, part of croped image could be out of
-        image edge, so pad it'''
+        image edge, so pad it with the pixels next to it.
+        Input: image --- image to crop from
+                box --- a bonding box to crop the face from original image
+        Output: cropped -- the cropped images with padding'''
         rows = image.shape[0]
         cols = image.shape[1]
         delta_left =0
         delta_right =0
         delta_top = 0
         delta_bottom = 0
-
+        # among the 4 edges, check which one needs to be pad, and how much to pad on each edge
         if box[0] < 0:
             delta_left = -box[0]
         if box[2] >= cols:
@@ -220,10 +281,12 @@ class MarkDetector:
             delta_top = -box[1]
         if box[3] >= rows:
             delta_bottom = box[3] - rows +1        
+        # crop the image without padding
         cropped = image[max(0, box[1]):min(rows-1, box[3]) ,
                         max(0, box[0]):min(cols-1, box[2])]
-
+        # set the padding parameter
         pad_w = ((delta_top, delta_bottom), (delta_left, delta_right), (0, 0))
+        # pad the cropped image
         cropped = np.lib.pad(cropped, pad_w, 'edge')       
         return cropped
         
@@ -231,7 +294,6 @@ class MarkDetector:
         
         
         
-# Question remains --> need to modify extract_cnn_faces if for multiple faces   
 def main():
     start_time = time.time()
     markDetector = MarkDetector()

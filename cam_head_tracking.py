@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Real time webcam based face tracking pipeline. Capable of tracking faces,
+landmarks, and head pose through a webcam.
+
 Created on Fri Jul 13 13:14:57 2018
 
-@author: eric
+@author: eric yang
 """
 import FaceVar
 from kf_2points import kf_2points
@@ -39,19 +42,27 @@ def main():
     tracker = Tracker(FaceVar.IOU_THRESHOLD, img_size=(height, width))
     
     while True:
-        frame_got, frame = cam.read()
+        frame_got, frame = cam.read() # read an image from camera
         
-        if frame_got is False:
+        if frame_got is False: # if not getting an image, just break
+            print('Camera is not getting images')
             break
+        
+        # detect faces from the current image 
         conf, boxes = face_detector.get_faceboxes(image=frame, threshold=0.9)
+        
+        # associate the current detection with existing tracks
         matches, unmatched_dets, unmatched_tracks = tracker.assign_detections_to_trackers(boxes)
+        
+        # update the tracking system
         tracker.update(frame, boxes, matches, unmatched_dets, unmatched_tracks)
+        
+        # annotate curent image (optional for bonding box, landmarks, head pose. all fater kalman filter)
         frame = tracker.annotate_BBox(frame)
+        
+        # choose if draw orignal detection bonding box on image, without kalman filter.
         if FaceVar.DRAW_ORIG_BBOX:
-            frame = draw_BBox(image=frame, faceboxes=boxes, confidences=conf)  
-        # if facebox is not None:(image=frame, marksFace=stabilized_marks68)            
-            
-           
+            frame = draw_BBox(image=frame, faceboxes=boxes, confidences=conf)     
         
         cv2.imshow("preview", frame)
         if cv2.waitKey(10) == 27:

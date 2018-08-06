@@ -6,7 +6,7 @@ This is an implementation of a multi-face tracking system using kalman filter to
 
 The implementation is organized as following
 
-![/home/eric/Documents/face_analysis/photo/code_structure.jpg](/home/eric/Documents/face_analysis/photo/code_structure.jpg)
+![](https://github.com/EricYang3721/faces/blob/master/photo/code_structure.jpg)
 
 FaceDetector.py adopted an Single Shot Detector (SSD) for identifying faces in given images. Details about the SSD is could be found SSD: Single Shot MultiBox Detector https://arxiv.org/abs/1512.02325 
 
@@ -56,7 +56,7 @@ Other parameters controlling the tracking system could also be adjusted inside t
 
 ### 3. Some results
 
-![](/home/eric/Documents/face_analysis/photo/results.jpg)
+![](https://github.com/EricYang3721/faces/blob/master/photo/results.jpg)
 
 Once running the cam_head_tracking.py, the above image would pop out. 
 

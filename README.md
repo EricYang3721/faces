@@ -84,14 +84,15 @@ A few functions could be used in adjusting the parameters in FaceVar.py
    MIN_HITS = 10   # no. of consecutive matches needed to draw tracking
    ```
 
-
 ### 5. References
 
-This implementation referred or adapted partially from following sources:
+### This implementation referred or adapted partially from following sources:
 
-[1]: https://github.com/yinguobing/head-pose-estimation
-[2]: https://yinguobing.com/facial-landmark-localization-by-deep-learning-network-model/
-[3]: https://github.com/kcg2015/Vehicle-Detection-and-Tracking/blob/master/helpers.py
-[4]: https://github.com/mabhisharma/Multi-Object-Tracking-with-Kalman-Filter
-[5]: https://github.com/kcg2015/Vehicle-Detection-and-Tracking
+[1] https://github.com/yinguobing/head-pose-estimation 
+
+[2] https://yinguobing.com/facial-landmark-localization-by-deep-learning-network-model/ 
+
+[3] https://github.com/kcg2015/Vehicle-Detection-and-Tracking/
+
+[4] https://github.com/mabhisharma/Multi-Object-Tracking-with-Kalman-Filter
 

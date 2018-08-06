@@ -9,7 +9,7 @@ COV_PROCESS=0.1
 # Max Trace Length
 MAX_TRACE_LENGTH=20
 
-# no. of consecutive matches needed to establish a track
+# no. of consecutive matches needed to draw tracking
 MIN_HITS = 10
 
 # no.of consecutive unmatched detection before a track is deleted
